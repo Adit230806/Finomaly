@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Finomaly Anomaly Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; }
+        .form-group { margin: 15px 0; }
+        input, button { padding: 10px; margin: 5px; }
+        .result { margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .normal { background: #d4edda; border: 1px solid #c3e6cb; }
+        .anomaly { background: #f8d7da; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Finomaly Anomaly Detection Test</h1>
+        
+        <form id="testForm">
+            <div class="form-group">
+                <label>User ID:</label>
+                <input type="text" id="userId" value="test_user_001" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Amount:</label>
+                <input type="number" id="amount" value="150" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Timestamp:</label>
+                <input type="datetime-local" id="timestamp" required>
+            </div>
+            
+            <button type="submit">🧪 Test Transaction</button>
+            <button type="button" onclick="testPresets()">🚀 Run Preset Tests</button>
+        </form>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Set current time as default
+        document.getElementById('timestamp').value = new Date().toISOString().slice(0, 16);
+        
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                user_id: document.getElementById('userId').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                timestamp: document.getElementById('timestamp').value + ':00'
+            };
+            
+            await testTransaction(data);
+        });
+        
+        async function testTransaction(data) {
+            try {
+                const response = await fetch('http://localhost:5001/api/test-anomaly', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: 'Connection failed. Is the API running?' });
+            }
+        }
+        
+        function displayResult(result) {
+            const resultsDiv = document.getElementById('results');
+            const isAnomaly = result.is_anomaly;
+            const className = isAnomaly ? 'anomaly' : 'normal';
+            
+            const html = `
+                <div class="result ${className}">
+                    <h3>${isAnomaly ? '🚨 ANOMALY DETECTED' : '✅ NORMAL TRANSACTION'}</h3>
+                    <p><strong>Risk Score:</strong> ${result.risk_score || 'N/A'}/100</p>
+                    <p><strong>Amount:</strong> $${result.amount || 'N/A'}</p>
+                    <p><strong>User:</strong> ${result.user_id || 'N/A'}</p>
+                    <p><strong>Anomaly Score:</strong> ${result.anomaly_score?.toFixed(3) || 'N/A'}</p>
+                    ${result.features ? `
+                        <details>
+                            <summary>Feature Details</summary>
+                            <p>Amount Deviation: ${result.features.amount_deviation.toFixed(3)}</p>
+                            <p>Time Since Last: ${result.features.time_since_last.toFixed(1)} hours</p>
+                            <p>Transactions/Day: ${result.features.tx_per_day.toFixed(2)}</p>
+                        </details>
+                    ` : ''}
+                    ${result.error ? `<p style="color: red;">Error: ${result.error}</p>` : ''}
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html + resultsDiv.innerHTML;
+        }
+        
+        async function testPresets() {
+            const tests = [
+                { user_id: 'user_001', amount: 100, timestamp: '2024-01-01T14:00:00' },
+                { user_id: 'user_001', amount: 5000, timestamp: '2024-01-01T14:30:00' },
+                { user_id: 'user_001', amount: 150, timestamp: '2024-01-01T14:31:00' }
+            ];
+            
+            for (const test of tests) {
+                await testTransaction(test);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+    </script>
+</body>
+</html>

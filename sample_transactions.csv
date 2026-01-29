@@ -1,0 +1,9 @@
+amount,location,account,timestamp,id
+150.50,New York,user123,2024-01-15 14:30:00,txn001
+2500.00,Los Angeles,user123,2024-01-15 15:45:00,txn002
+75.25,New York,user456,2024-01-15 16:20:00,txn003
+8000.00,Unknown City,user123,2024-01-16 02:15:00,txn004
+200.00,Chicago,user789,2024-01-16 10:30:00,txn005
+50.00,New York,user123,2024-01-16 12:00:00,txn006
+15000.00,Miami,user456,2024-01-16 03:45:00,txn007
+300.00,Boston,user789,2024-01-16 14:20:00,txn008
