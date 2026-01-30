@@ -95,9 +95,62 @@ The model analyzes 6 key features:
 
 ## Risk Scoring
 
-- **0-50**: Safe (Green)
-- **51-70**: Medium Risk (Yellow)
-- **71-100**: High Risk (Red)
+### Risk Score Calculation
+
+**Formula:**
+```
+Risk Score = min(|Z-Score| × 25, 100)
+```
+
+**Step-by-step process:**
+
+1. **Calculate Z-Score** (Statistical deviation)
+   ```
+   Z-Score = (Transaction Amount - Mean Amount) / Standard Deviation
+   ```
+
+2. **Multiply by 25** (Scale to 0-100 range)
+   ```
+   Risk Score = |Z-Score| × 25
+   ```
+
+3. **Cap at 100** (Maximum risk score)
+   ```
+   Risk Score = min(Risk Score, 100)
+   ```
+
+### Risk Level Classification
+
+- **Safe (Green)**: Risk Score ≤ 50
+- **Medium (Yellow)**: 50 < Risk Score ≤ 70
+- **High (Red)**: Risk Score > 70
+
+### Anomaly Detection
+
+- **Flagged as Anomaly**: |Z-Score| > 2.5 (more than 2.5 standard deviations from mean)
+
+### Example Calculation
+
+```
+Transactions: [₹100, ₹105, ₹110, ₹115, ₹120, ₹5000]
+Mean = ₹1108.33
+Std Dev = ₹1963.5
+
+For transaction of ₹5000:
+Z-Score = (5000 - 1108.33) / 1963.5 = 1.98
+Risk Score = min(1.98 × 25, 100) = 49.5 (Safe)
+
+For transaction of ₹100:
+Z-Score = (100 - 1108.33) / 1963.5 = -0.51
+Risk Score = min(0.51 × 25, 100) = 12.75 (Safe)
+```
+
+### Key Points
+
+- Uses **statistical deviation** (Z-score) to detect outliers
+- Transactions far from average get higher risk scores
+- Absolute value ensures both high and low outliers are detected
+- Capped at 100 to maintain 0-100 scale
 
 ## Model Configuration
 

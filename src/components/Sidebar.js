@@ -8,7 +8,6 @@ const Sidebar = () => {
     { name: 'Dashboard', icon: '📊', path: '/dashboard' },
     { name: 'Transactions', icon: '💳', path: '/transactions' },
     { name: 'Anomaly Detection', icon: '🚨', path: '/anomaly-detection' },
-    { name: 'Analytics', icon: '📈', path: '/analytics' },
     { name: 'Settings', icon: '⚙️', path: '/settings' }
   ];
 

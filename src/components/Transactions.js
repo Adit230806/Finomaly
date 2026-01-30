@@ -11,7 +11,6 @@ const Transactions = () => {
     console.log('Setting up Firebase listener...');
     console.log('Database object:', db);
     
-    // Real-time listener
     const unsubscribe = onSnapshot(
       collection(db, 'transactions'),
       (querySnapshot) => {
@@ -44,6 +43,68 @@ const Transactions = () => {
       unsubscribe();
     };
   }, []);
+
+  const exportToPDF = () => {
+    const element = document.getElementById('transactions-table');
+    const opt = {
+      margin: 10,
+      filename: 'transactions_report.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'landscape' }
+    };
+
+    // Create a simple HTML table for PDF
+    let htmlContent = `
+      <h2>Finomaly - Transactions Report</h2>
+      <p>Generated on: ${new Date().toLocaleString()}</p>
+      <table border="1" cellpadding="10" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background-color:#f0f0f0;">
+            <th>Transaction ID</th>
+            <th>Amount (₹)</th>
+            <th>Account</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Risk Level</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    transactions.forEach(tx => {
+      htmlContent += `
+        <tr>
+          <td>${tx.transactionId || tx.id}</td>
+          <td>${tx.amount?.toLocaleString() || 'N/A'}</td>
+          <td>${tx.account || 'N/A'}</td>
+          <td>${tx.location || 'N/A'}</td>
+          <td>${tx.status || 'Unknown'}</td>
+          <td>${tx.riskLevel || 'Unknown'}</td>
+          <td>${formatDate(tx.date)}</td>
+        </tr>
+      `;
+    });
+
+    htmlContent += `
+        </tbody>
+      </table>
+      <p style="margin-top:20px;"><strong>Summary:</strong></p>
+      <p>Total Transactions: ${transactions.length}</p>
+      <p>Total Amount: ₹${transactions.reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}</p>
+    `;
+
+    // Use html2pdf library
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => {
+      const element = document.createElement('div');
+      element.innerHTML = htmlContent;
+      window.html2pdf().set(opt).from(element).save();
+    };
+    document.head.appendChild(script);
+  };
 
   const deleteAllTransactions = async () => {
     try {
@@ -126,9 +187,9 @@ const Transactions = () => {
               <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
                 Filter
               </button>
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200">
-                Export
-              </button>
+            <button onClick={exportToPDF} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+              Export PDF
+            </button>
             </div>
           </div>
         </div>
@@ -155,7 +216,7 @@ const Transactions = () => {
                 {transactions.map((transaction, index) => (
                   <tr key={transaction.id || index} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-6 py-4 text-sm font-medium text-gray-800">{transaction.transactionId || transaction.id}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-gray-800">${transaction.amount?.toLocaleString() || 'N/A'}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-gray-800">₹{transaction.amount?.toLocaleString() || 'N/A'}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{transaction.account || 'N/A'}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{transaction.location || 'N/A'}</td>
                     <td className="px-6 py-4">

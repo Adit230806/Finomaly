@@ -8,6 +8,7 @@ import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
 import AnomalyDetection from './components/AnomalyDetection';
+import Settings from './components/Settings';
 import FirebaseTest from './components/FirebaseTest';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/transactions" element={<Transactions />} />
                       <Route path="/anomaly-detection" element={<AnomalyDetection />} />
+                      <Route path="/settings" element={<Settings />} />
                     </Routes>
                   </main>
                 </div>
