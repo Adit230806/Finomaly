@@ -46,18 +46,37 @@ const AnomalyDetection = () => {
     setError(null);
     
     try {
-      // Reset session before analysis
-      await fetch('http://localhost:5000/api/reset-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
       const csvText = await csvFile.text();
       const transactions = parseCSV(csvText);
+      
+      // Calculate user statistics
+      const userStats = {};
+      transactions.forEach(t => {
+        const userId = t.user_id || t.account || t.Account || 'default';
+        if (!userStats[userId]) {
+          userStats[userId] = { amounts: [], count: 0 };
+        }
+        userStats[userId].amounts.push(parseFloat(t.amount || t.Amount || 0));
+        userStats[userId].count += 1;
+      });
+
+      Object.keys(userStats).forEach(userId => {
+        const amounts = userStats[userId].amounts;
+        userStats[userId].avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+        const variance = amounts.reduce((sum, val) => sum + Math.pow(val - userStats[userId].avg, 2), 0) / amounts.length;
+        userStats[userId].std = Math.sqrt(variance) || userStats[userId].avg * 0.3;
+      });
+
       const analysisResults = [];
 
-      for (const transaction of transactions) {
+      for (let i = 0; i < transactions.length; i++) {
+        const transaction = transactions[i];
         try {
+          const userId = transaction.user_id || transaction.account || transaction.Account || 'default';
+          const stats = userStats[userId];
+          const hoursSinceLast = i === 0 ? 24 : 1;
+          const daysActive = Math.max(1, Math.ceil(stats.count / 5));
+
           const response = await fetch('http://localhost:5000/api/analyze-transaction', {
             method: 'POST',
             headers: {
@@ -65,7 +84,12 @@ const AnomalyDetection = () => {
             },
             body: JSON.stringify({
               amount: parseFloat(transaction.amount || transaction.Amount || 0),
-              account: transaction.account || transaction.Account || transaction.user_id || 'Unknown',
+              user_avg: stats.avg,
+              user_std: stats.std,
+              hours_since_last: hoursSinceLast,
+              total_tx_so_far: i + 1,
+              days_active: daysActive,
+              account: transaction.account || transaction.Account || userId,
               timestamp: transaction.timestamp || transaction.Timestamp || new Date().toISOString(),
               transactionId: transaction.id || transaction.ID || Math.random().toString(36).substr(2, 9)
             })
@@ -76,13 +100,14 @@ const AnomalyDetection = () => {
             analysisResults.push({
               ...transaction,
               ...result,
-              amount: parseFloat(transaction.amount || transaction.Amount || 0)
+              amount: parseFloat(transaction.amount || transaction.Amount || 0),
+              riskLevel: result.prediction === 'anomaly' ? 'High Risk' : 'Safe'
             });
           } else {
             analysisResults.push({
               ...transaction,
               error: 'Analysis failed',
-              riskScore: 0,
+              risk_score: 0,
               riskLevel: 'Unknown',
               amount: parseFloat(transaction.amount || transaction.Amount || 0)
             });
@@ -91,7 +116,7 @@ const AnomalyDetection = () => {
           analysisResults.push({
             ...transaction,
             error: err.message,
-            riskScore: 0,
+            risk_score: 0,
             riskLevel: 'Error',
             amount: parseFloat(transaction.amount || transaction.Amount || 0)
           });
@@ -118,24 +143,23 @@ const AnomalyDetection = () => {
     return 'bg-gradient-to-r from-red-500 to-rose-500';
   };
 
-  const anomalousTransactions = results.filter(t => t.riskScore > 50);
+  const anomalousTransactions = results.filter(t => t.risk_score > 50);
 
-  // Chart data preparation
   const riskDistribution = [
-    { name: 'Safe', value: results.filter(t => t.riskScore <= 50).length, color: '#10b981' },
-    { name: 'Medium', value: results.filter(t => t.riskScore > 50 && t.riskScore <= 70).length, color: '#f59e0b' },
-    { name: 'High', value: results.filter(t => t.riskScore > 70).length, color: '#ef4444' }
+    { name: 'Safe', value: results.filter(t => t.risk_score <= 50).length, color: '#10b981' },
+    { name: 'Medium', value: results.filter(t => t.risk_score > 50 && t.risk_score <= 70).length, color: '#f59e0b' },
+    { name: 'High', value: results.filter(t => t.risk_score > 70).length, color: '#ef4444' }
   ];
 
   const riskScoreData = results.map((t, index) => ({
     transaction: `T${index + 1}`,
-    riskScore: t.riskScore,
+    riskScore: t.risk_score,
     amount: t.amount
   }));
 
   const amountVsRisk = results.map((t, index) => ({
     amount: t.amount,
-    riskScore: t.riskScore,
+    riskScore: t.risk_score,
     name: `T${index + 1}`
   }));
 
@@ -144,7 +168,7 @@ const AnomalyDetection = () => {
     if (!acc[location]) {
       acc[location] = { location, totalRisk: 0, count: 0 };
     }
-    acc[location].totalRisk += t.riskScore;
+    acc[location].totalRisk += t.risk_score;
     acc[location].count += 1;
     return acc;
   }, {});
@@ -270,7 +294,7 @@ const AnomalyDetection = () => {
                 <div>
                   <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Avg Risk Score</p>
                   <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
-                    {Math.round(results.reduce((sum, t) => sum + t.riskScore, 0) / results.length)}
+                    {Math.round(results.reduce((sum, t) => sum + t.risk_score, 0) / results.length)}
                   </p>
                 </div>
                 <div className={`w-12 h-12 rounded-lg ${darkMode ? 'bg-amber-900/30' : 'bg-amber-100'} flex items-center justify-center`}>
@@ -408,22 +432,22 @@ const AnomalyDetection = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-4 mb-3">
-                      <div className={`px-3 py-1 rounded-lg ${getRiskBadge(transaction.riskScore || 0)} border font-bold text-sm`}>
+                      <div className={`px-3 py-1 rounded-lg ${getRiskBadge(transaction.risk_score || 0)} border font-bold text-sm`}>
                         {transaction.riskLevel || 'Unknown'}
                       </div>
                       <span className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
                         ${transaction.amount.toLocaleString()}
                       </span>
                       <span className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Score: {transaction.riskScore || 0}/100
+                        Score: {transaction.risk_score || 0}/100
                       </span>
                     </div>
                     
                     <div className="mb-3">
                       <div className={`w-full ${darkMode ? 'bg-slate-700' : 'bg-slate-200'} rounded-full h-2 overflow-hidden`}>
                         <div 
-                          className={`h-2 rounded-full transition-all duration-500 ${getProgressColor(transaction.riskScore || 0)}`}
-                          style={{ width: `${transaction.riskScore || 0}%` }}
+                          className={`h-2 rounded-full transition-all duration-500 ${getProgressColor(transaction.risk_score || 0)}`}
+                          style={{ width: `${transaction.risk_score || 0}%` }}
                         ></div>
                       </div>
                     </div>
@@ -448,17 +472,6 @@ const AnomalyDetection = () => {
                         </span>
                       </div>
                     </div>
-                    
-                    {transaction.reasons && transaction.reasons.length > 0 && (
-                      <div className={`mt-3 p-3 rounded-lg ${darkMode ? 'bg-red-900/20' : 'bg-red-50'}`}>
-                        <p className={`text-sm font-medium ${darkMode ? 'text-red-300' : 'text-red-700'} mb-1`}>Anomaly Reasons:</p>
-                        <ul className="text-sm space-y-1">
-                          {transaction.reasons.map((reason, idx) => (
-                            <li key={idx} className={`${darkMode ? 'text-red-400' : 'text-red-600'}`}>• {reason}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
