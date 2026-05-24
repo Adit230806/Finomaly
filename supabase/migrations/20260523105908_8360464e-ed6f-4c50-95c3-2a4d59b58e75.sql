@@ -1,0 +1,5 @@
+-- This migration has been superseded by 00000000000000_base_schema.sql
+-- All objects it created (app_role, profiles, user_roles, transactions,
+-- alerts, has_role, handle_new_user, RLS policies, realtime, indexes)
+-- are now defined in the base schema with full idempotency guards.
+-- This file is intentionally left as a no-op.

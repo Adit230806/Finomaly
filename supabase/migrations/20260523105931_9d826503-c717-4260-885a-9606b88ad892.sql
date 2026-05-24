@@ -1,0 +1,3 @@
+-- This migration has been superseded by 00000000000000_base_schema.sql
+-- The REVOKE statements it contained are now part of the base schema.
+-- This file is intentionally left as a no-op.

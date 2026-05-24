@@ -1,0 +1,4 @@
+-- This migration has been superseded by 00000000000000_base_schema.sql
+-- The admin enum value, email columns, updated RLS policies, and
+-- updated handle_new_user trigger are all defined in the base schema.
+-- This file is intentionally left as a no-op.

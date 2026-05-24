@@ -1,0 +1,251 @@
+import { useState, useMemo } from "react";
+import { motion } from "framer-motion";
+import { Sparkles, Zap } from "lucide-react";
+import { toast } from "sonner";
+import { AMOUNT_INPUT_LABEL } from "@/lib/currency";
+import { useTransactions } from "@/hooks/use-transactions";
+import type { Category, PaymentMethod } from "@/types/transaction";
+import type { RiskResult } from "@/lib/risk";
+
+const MERCHANTS = [
+  "Amazon",
+  "Starbucks",
+  "Apple",
+  "Uber",
+  "Whole Foods",
+  "Netflix",
+  "Steam",
+  "Binance",
+  "Unknown Vendor",
+];
+const LOCATIONS = [
+  "New York, US",
+  "San Francisco, US",
+  "London, UK",
+  "Tokyo, JP",
+  "Berlin, DE",
+  "Lagos, NG",
+  "Dubai, AE",
+];
+const METHODS = ["Card", "Bank Transfer", "Crypto", "Wallet"] as const;
+
+export function TransactionSimulator() {
+  const { transactions, addTransaction } = useTransactions();
+
+  const [merchant, setMerchant] = useState(MERCHANTS[0]);
+  const [amount, setAmount] = useState("125.00");
+  const [location, setLocation] = useState(LOCATIONS[0]);
+  const [method, setMethod] = useState<(typeof METHODS)[number]>(METHODS[0]);
+  const [simLoading, setSimLoading] = useState(false);
+  const [result, setResult] = useState<RiskResult | null>(null);
+
+  const userAvg = useMemo(
+    () =>
+      transactions.length
+        ? transactions.reduce((s, t) => s + t.amount, 0) / transactions.length
+        : 0,
+    [transactions],
+  );
+  const knownLocations = useMemo(
+    () => Array.from(new Set(transactions.map((t) => t.location))),
+    [transactions],
+  );
+
+  const handleSimulate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSimLoading(true);
+    setResult(null);
+
+    try {
+      const saved = await addTransaction({
+        merchant,
+        amount: Number(amount),
+        location,
+        category: "Shopping" as Category,
+        paymentMethod: method as PaymentMethod,
+        userAvg: userAvg || undefined,
+        knownLocations: knownLocations.length ? knownLocations : undefined,
+      });
+
+      setResult({
+        score: saved.riskScore,
+        confidence: saved.confidenceLevel,
+        reasons: saved.explanation,
+        isAnomaly: saved.isAnomaly,
+      });
+
+      toast.success(
+        saved.isAnomaly
+          ? "Anomaly detected — saved for analysis"
+          : "Transaction analyzed and saved",
+      );
+    } catch {
+      toast.error("Could not save transaction.");
+    } finally {
+      setSimLoading(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="bg-white/80 backdrop-blur-xl rounded-3xl border border-[#E8E6E0] p-6"
+        style={{ boxShadow: "0 2px 24px rgba(0,0,0,0.06)" }}
+      >
+        <div className="flex items-center gap-2 mb-5">
+          <div className="h-9 w-9 rounded-xl bg-[#E8F9EF] flex items-center justify-center">
+            <Zap size={18} className="text-[#00C853]" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-[#0A0A0A]">New Transaction</h2>
+            <p className="text-xs text-[#6B6B6B]">Risk scoring runs in the service layer</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSimulate} className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">Merchant</label>
+            <select
+              value={merchant}
+              onChange={(e) => setMerchant(e.target.value)}
+              className="w-full h-11 rounded-xl border border-[#E8E6E0] px-3 text-sm outline-none focus:border-[#00C853] focus:ring-2 focus:ring-[#00C853]/20 bg-white transition-all"
+            >
+              {MERCHANTS.map((m) => (
+                <option key={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">
+              {AMOUNT_INPUT_LABEL}
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+              className="w-full h-11 rounded-xl border border-[#E8E6E0] px-3 text-sm outline-none focus:border-[#00C853] focus:ring-2 focus:ring-[#00C853]/20 transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">Location</label>
+              <select
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full h-11 rounded-xl border border-[#E8E6E0] px-3 text-sm outline-none focus:border-[#00C853] focus:ring-2 focus:ring-[#00C853]/20 bg-white transition-all"
+              >
+                {LOCATIONS.map((l) => (
+                  <option key={l}>{l}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">Payment</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value as typeof method)}
+                className="w-full h-11 rounded-xl border border-[#E8E6E0] px-3 text-sm outline-none focus:border-[#00C853] focus:ring-2 focus:ring-[#00C853]/20 bg-white transition-all"
+              >
+                {METHODS.map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={simLoading}
+            className="w-full h-12 rounded-xl bg-[#00C853] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#00B347] disabled:opacity-60 transition-all shadow-lg shadow-[#00C853]/25"
+          >
+            <Sparkles size={16} />
+            {simLoading ? "Analyzing…" : "Analyze Transaction"}
+          </button>
+        </form>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.08 }}
+        className={`rounded-3xl border p-6 flex flex-col min-h-[320px] ${
+          result
+            ? result.isAnomaly
+              ? "bg-[#0b0b0b] border-[#333] text-white"
+              : "bg-white/80 backdrop-blur-xl border-[#E8E6E0]"
+            : "bg-[#F8F7F4]/80 backdrop-blur-xl border-dashed border-[#E8E6E0]"
+        }`}
+        style={{ boxShadow: result ? "0 2px 24px rgba(0,0,0,0.08)" : undefined }}
+      >
+        {!result ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+            <div className="h-14 w-14 rounded-2xl bg-[#E8F9EF] flex items-center justify-center mb-4">
+              <Sparkles size={24} className="text-[#00C853]" />
+            </div>
+            <p className="font-medium text-[#0A0A0A] mb-1">Prediction Result</p>
+            <p className="text-xs text-[#6B6B6B] max-w-[220px]">
+              Submit a transaction to see risk score and explainable reasons
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <span
+                  className={`text-xs font-bold uppercase tracking-wider ${
+                    result.isAnomaly ? "text-[#FF3B30]" : "text-[#00C853]"
+                  }`}
+                >
+                  {result.isAnomaly ? "Anomaly Detected" : "Looks Clean"}
+                </span>
+                <p className={`text-xs mt-1 ${result.isAnomaly ? "text-white/50" : "text-[#6B6B6B]"}`}>
+                  Confidence {result.confidence}%
+                </p>
+              </div>
+              <div className="text-right">
+                <span
+                  className={`text-4xl font-bold tabular-nums ${result.isAnomaly ? "text-white" : "text-[#0A0A0A]"}`}
+                >
+                  {result.score}
+                </span>
+                <span className={`text-sm ${result.isAnomaly ? "text-white/40" : "text-[#6B6B6B]"}`}>
+                  /100
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2 overflow-y-auto">
+              <p
+                className={`text-xs font-medium mb-2 ${result.isAnomaly ? "text-white/60" : "text-[#6B6B6B]"}`}
+              >
+                Why flagged?
+              </p>
+              <ul className="space-y-2">
+                {result.reasons.map((r, i) => (
+                  <li
+                    key={i}
+                    className={`text-xs rounded-xl px-3 py-2.5 leading-relaxed list-none flex gap-2 before:content-['•'] before:font-bold ${
+                      result.isAnomaly
+                        ? "bg-white/10 text-white/90 before:text-[#FF3B30]"
+                        : "bg-[#F0EFEA] text-[#0A0A0A] before:text-[#00C853]"
+                    }`}
+                  >
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+      </motion.div>
+    </div>
+  );
+}
