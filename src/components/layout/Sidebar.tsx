@@ -1,36 +1,49 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeftRight, Activity, Bell,
-  Settings, ChevronLeft, ChevronRight, LogOut, Sparkles, ShieldAlert,
+  ArrowLeftRight,
+  Activity,
+  Bell,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Sparkles,
+  ShieldAlert,
   LayoutDashboard,
+  X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout } from "@/hooks/use-logout";
 import { useAlerts } from "@/hooks/use-alerts";
 import { defaultPathForMode } from "@/lib/dashboard-mode";
+import { useLayout } from "./layout-context";
+import { cn } from "@/lib/utils";
 
 const USER_NAV = [
   { to: "/user-dashboard", label: "Simulate", Icon: Sparkles },
-  { to: "/settings",       label: "Settings", Icon: Settings },
+  { to: "/settings", label: "Settings", Icon: Settings },
 ];
 
 const ADMIN_NAV = [
   { to: "/admin-dashboard", label: "Command Center", Icon: ShieldAlert },
-  { to: "/transactions",    label: "Transactions",   Icon: ArrowLeftRight },
-  { to: "/live-feed",       label: "Live Feed",      Icon: Activity },
-  { to: "/alerts",          label: "Alerts",         Icon: Bell },
-  { to: "/user-dashboard",  label: "Simulator",      Icon: Sparkles },
-  { to: "/settings",        label: "Settings",       Icon: Settings },
+  { to: "/transactions", label: "Transactions", Icon: ArrowLeftRight },
+  { to: "/live-feed", label: "Live Feed", Icon: Activity },
+  { to: "/alerts", label: "Alerts", Icon: Bell },
+  { to: "/user-dashboard", label: "Simulator", Icon: Sparkles },
+  { to: "/settings", label: "Settings", Icon: Settings },
 ];
 
 const STORAGE_KEY = "finomaly_sidebar_collapsed";
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) === "true"; } catch { return false; }
-  });
+function NavContent({
+  collapsed,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
   const { pathname } = useRouterState({ select: (s) => s.location });
   const { currentUser, dashboardMode, setDashboardMode } = useAuth();
   const performLogout = useLogout();
@@ -41,52 +54,15 @@ export function Sidebar() {
   const NAV = isAdminView ? ADMIN_NAV : USER_NAV;
   const newAlertCount = alerts.filter((a) => a.status === "New").length;
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, String(collapsed));
-  }, [collapsed]);
-
-  const handleLogout = () => {
-    void performLogout();
-  };
-
   const switchMode = () => {
     const next = isAdminView ? "user" : "admin";
     setDashboardMode(next);
     nav({ to: defaultPathForMode(next), replace: true });
+    onNavigate?.();
   };
 
   return (
-    <motion.aside
-      animate={{ width: collapsed ? 64 : 240 }}
-      transition={{ type: "spring", damping: 28, stiffness: 280 }}
-      className="fixed left-0 top-0 h-full bg-white border-r border-[#E8E6E0] z-50 flex flex-col overflow-hidden"
-      style={{ boxShadow: "2px 0 16px rgba(0,0,0,0.04)" }}
-    >
-      <div className="h-16 flex items-center px-4 border-b border-[#E8E6E0] flex-shrink-0">
-        <div className="h-8 w-8 rounded-xl bg-[#00C853] flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">F</span>
-        </div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.15 }}
-              className="ml-3 font-bold text-[#0A0A0A] text-base whitespace-nowrap overflow-hidden"
-            >
-              Finomaly
-            </motion.span>
-          )}
-        </AnimatePresence>
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          className="ml-auto h-7 w-7 rounded-lg hover:bg-[#F0EFEA] flex items-center justify-center transition-colors flex-shrink-0"
-        >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-      </div>
-
+    <>
       <AnimatePresence>
         {!collapsed && (
           <motion.div
@@ -110,17 +86,24 @@ export function Sidebar() {
         {NAV.map(({ to, label, Icon }) => {
           const active =
             pathname === to ||
-            (to !== "/user-dashboard" && to !== "/admin-dashboard" && pathname.startsWith(to));
+            (to !== "/user-dashboard" &&
+              to !== "/admin-dashboard" &&
+              pathname.startsWith(to));
           return (
             <div key={to} className="relative group">
               <Link
                 to={to}
+                onClick={onNavigate}
                 className={`flex items-center gap-3 h-11 rounded-[10px] px-3 transition-colors relative ${
                   active
                     ? "bg-[#E8F9EF] text-[#00A844]"
                     : "text-[#6B6B6B] hover:bg-[#F0EFEA] hover:text-[#0A0A0A]"
                 }`}
-                style={active ? { borderLeft: "3px solid #00C853" } : { borderLeft: "3px solid transparent" }}
+                style={
+                  active
+                    ? { borderLeft: "3px solid #00C853" }
+                    : { borderLeft: "3px solid transparent" }
+                }
               >
                 <div className="flex-shrink-0 relative">
                   <Icon size={18} />
@@ -145,7 +128,7 @@ export function Sidebar() {
                 </AnimatePresence>
               </Link>
               {collapsed && (
-                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-[#0A0A0A] text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-[#0A0A0A] text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 hidden lg:block">
                   {label}
                 </div>
               )}
@@ -159,7 +142,6 @@ export function Sidebar() {
           type="button"
           onClick={switchMode}
           className="flex items-center gap-3 h-10 w-full rounded-[10px] px-3 text-[#6B6B6B] hover:bg-[#F0EFEA] hover:text-[#0A0A0A] transition-colors"
-          title={isAdminView ? "Switch to user simulator" : "Switch to admin command center"}
         >
           <LayoutDashboard size={16} className="flex-shrink-0" />
           <AnimatePresence>
@@ -196,7 +178,10 @@ export function Sidebar() {
         </AnimatePresence>
 
         <button
-          onClick={handleLogout}
+          onClick={() => {
+            void performLogout();
+            onNavigate?.();
+          }}
           className="flex items-center gap-3 h-10 w-full rounded-[10px] px-3 text-[#FF3B30] hover:bg-[#FFF0EE] transition-colors"
         >
           <LogOut size={16} className="flex-shrink-0" />
@@ -214,6 +199,83 @@ export function Sidebar() {
           </AnimatePresence>
         </button>
       </div>
-    </motion.aside>
+    </>
+  );
+}
+
+export function Sidebar() {
+  const { mobileOpen, closeMobile, sidebarCollapsed, setSidebarCollapsed } = useLayout();
+  const collapsed = sidebarCollapsed;
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, String(collapsed));
+  }, [collapsed]);
+
+  const toggleCollapsed = () => setSidebarCollapsed(!collapsed);
+
+  const asideClass = cn(
+    "fixed left-0 top-0 h-full bg-white border-r border-[#E8E6E0] z-50 flex flex-col overflow-hidden",
+    "transition-transform duration-300 ease-out",
+    "w-60 max-w-[85vw]",
+    mobileOpen ? "translate-x-0" : "-translate-x-full",
+    "lg:translate-x-0",
+    collapsed ? "lg:w-16" : "lg:w-60",
+  );
+
+  return (
+    <>
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            aria-label="Close menu"
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={closeMobile}
+          />
+        )}
+      </AnimatePresence>
+
+      <aside className={asideClass} style={{ boxShadow: "2px 0 16px rgba(0,0,0,0.04)" }}>
+        <div className="h-14 sm:h-16 flex items-center px-3 sm:px-4 border-b border-[#E8E6E0] flex-shrink-0">
+          <div className="h-8 w-8 rounded-xl bg-[#00C853] flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm">F</span>
+          </div>
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.15 }}
+                className="ml-3 font-bold text-[#0A0A0A] text-base whitespace-nowrap overflow-hidden"
+              >
+                Finomaly
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <button
+            type="button"
+            onClick={closeMobile}
+            className="ml-auto h-8 w-8 rounded-lg hover:bg-[#F0EFEA] flex items-center justify-center lg:hidden"
+            aria-label="Close navigation"
+          >
+            <X size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="ml-auto h-7 w-7 rounded-lg hover:bg-[#F0EFEA] hidden lg:flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
+        </div>
+
+        <NavContent collapsed={collapsed} onNavigate={closeMobile} />
+      </aside>
+    </>
   );
 }

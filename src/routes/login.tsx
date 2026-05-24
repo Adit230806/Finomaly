@@ -68,9 +68,9 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ backgroundColor: "#F0EFEA" }}>
-      <div className="w-full max-w-[480px]">
-        <div className="bg-white rounded-[20px] px-10 py-10" style={{ boxShadow: "0 4px 40px rgba(0,0,0,0.08)" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12" style={{ backgroundColor: "#F0EFEA" }}>
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-[20px] px-6 py-8 sm:px-10 sm:py-10" style={{ boxShadow: "0 4px 40px rgba(0,0,0,0.08)" }}>
 
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">

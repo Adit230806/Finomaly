@@ -147,7 +147,7 @@ function SettingsPage() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-[#0A0A0A]">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#0A0A0A]">Settings</h1>
         <p className="text-[#6B6B6B] text-sm mt-1">Manage your account and preferences</p>
       </div>
 

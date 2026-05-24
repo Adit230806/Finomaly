@@ -28,7 +28,7 @@ function UserDashboardPage() {
                 Fraud Simulator
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#0A0A0A]">Submit Transaction</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0A0A0A]">Submit Transaction</h1>
             <p className="text-[#6B6B6B] text-sm mt-2 max-w-md mx-auto">
               Run a transaction through the AI fraud engine and get an instant prediction
             </p>

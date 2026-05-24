@@ -215,16 +215,16 @@ function AdminDashboardPage() {
     <AdminRoute>
       <AppLayout>
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Radar size={14} className="text-[#7C3AED]" />
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#F3EEFF] text-[#7C3AED]">
                 Fraud Command Center
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-[#0A0A0A]">Fraud Analysis Hub</h1>
-            <p className="text-[#6B6B6B] text-sm mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#0A0A0A]">Fraud Analysis Hub</h1>
+            <p className="text-[#6B6B6B] text-sm mt-1 break-words">
               Monitoring for{" "}
               <span className="font-medium text-[#0A0A0A]">{currentUser?.email}</span>
               {" "}· your account data only
@@ -234,7 +234,7 @@ function AdminDashboardPage() {
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-6">
           <StatCard
             delay={0}
             iconBg="bg-[#E8F9EF]"
@@ -283,8 +283,8 @@ function AdminDashboardPage() {
 
         {/* Live monitoring */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[#0A0A0A]">Live Monitoring</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <h2 className="text-base sm:text-lg font-semibold text-[#0A0A0A]">Live Monitoring</h2>
             <Link to="/live-feed" className="text-xs text-[#00C853] font-medium hover:underline">
               Full feed →
             </Link>
@@ -567,7 +567,7 @@ function AdminDashboardPage() {
             <EmptyState message="No activity pattern data yet" />
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[600px]">
+              <div className="min-w-[280px] sm:min-w-[480px] md:min-w-[600px]">
                 <div className="flex mb-1 ml-10">
                   {Array.from({ length: 24 }, (_, h) => (
                     <div key={h} className="flex-1 text-center text-[9px] text-[#6B6B6B]">

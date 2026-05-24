@@ -69,7 +69,7 @@ function AlertsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#0A0A0A]">Alerts</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A0A0A]">Alerts</h1>
           <p className="text-[#6B6B6B] text-sm mt-1">Manage and review flagged transactions</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -96,7 +96,7 @@ function AlertsPage() {
 
       {/* Search + sort bar */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
+        <div className="relative flex-1 min-w-0 w-full sm:min-w-[200px] sm:max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B6B6B]" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search alerts..."
             className="w-full h-9 pl-8 pr-3 rounded-xl border border-[#E8E6E0] bg-white text-sm outline-none focus:border-[#00C853]" />

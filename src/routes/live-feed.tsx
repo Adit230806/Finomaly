@@ -62,14 +62,14 @@ function LiveFeedPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#0A0A0A]">Live Transaction Feed</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A0A0A]">Live Transaction Feed</h1>
           <p className="text-[#6B6B6B] text-sm mt-1">Real-time transaction monitoring</p>
         </div>
         <LiveDot label="Live" />
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {STAT_ITEMS.map(({ label, value }) => (
           <div key={label} className="bg-white rounded-2xl p-4 border border-[#E8E6E0]" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             <p className="text-xs text-[#6B6B6B] mb-1">{label}</p>

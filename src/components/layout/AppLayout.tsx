@@ -1,29 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { LayoutContext } from "./layout-context";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "finomaly_sidebar_collapsed";
 
-interface Props { children: React.ReactNode; }
+interface Props {
+  children: React.ReactNode;
+}
 
 export function AppLayout({ children }: Props) {
   const { isAuthenticated, loading, isLoggingOut } = useAuth();
   const nav = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) === "true"; } catch { return false; }
+    try {
+      return localStorage.getItem(STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
   });
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   useEffect(() => {
     const handler = () => {
-      try { setCollapsed(localStorage.getItem(STORAGE_KEY) === "true"); } catch { /* noop */ }
+      try {
+        setCollapsed(localStorage.getItem(STORAGE_KEY) === "true");
+      } catch {
+        /* noop */
+      }
     };
     window.addEventListener("storage", handler);
     const interval = setInterval(handler, 200);
-    return () => { window.removeEventListener("storage", handler); clearInterval(interval); };
+    return () => {
+      window.removeEventListener("storage", handler);
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -32,6 +49,22 @@ export function AppLayout({ children }: Props) {
       nav({ to: "/login", replace: true, search: {} });
     }
   }, [loading, isLoggingOut, isAuthenticated, nav]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMobile();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileOpen, closeMobile]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   if (loading || isLoggingOut) {
     return (
@@ -43,21 +76,31 @@ export function AppLayout({ children }: Props) {
 
   if (!isAuthenticated) return null;
 
-  const ml = collapsed ? 64 : 240;
-
   return (
-    <div className="min-h-screen bg-[#F0EFEA]">
-      <Sidebar />
-      <TopNavbar sidebarCollapsed={collapsed} />
-      <motion.main
-        animate={{ marginLeft: ml }}
-        transition={{ type: "spring", damping: 28, stiffness: 280 }}
-        className="pt-16 min-h-screen"
-      >
-        <div className="p-6 lg:p-8">
-          {children}
-        </div>
-      </motion.main>
-    </div>
+    <LayoutContext.Provider
+      value={{
+        mobileOpen,
+        setMobileOpen,
+        closeMobile,
+        sidebarCollapsed: collapsed,
+        setSidebarCollapsed: setCollapsed,
+      }}
+    >
+      <div className="min-h-screen bg-[#F0EFEA]">
+        <Sidebar />
+        <TopNavbar />
+        <main
+          className={cn(
+            "pt-14 sm:pt-16 min-h-screen transition-[margin] duration-300",
+            "ml-0",
+            collapsed ? "lg:ml-16" : "lg:ml-60",
+          )}
+        >
+          <div className="px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-[1600px] mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+    </LayoutContext.Provider>
   );
 }

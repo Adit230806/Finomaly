@@ -112,12 +112,12 @@ function TransactionsPage() {
     <AdminRoute>
     <AppLayout>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-[#0A0A0A]">Transactions</h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A0A0A]">Transactions</h1>
           <p className="text-[#6B6B6B] text-sm mt-1">Monitor and analyze all transactions</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#E8F9EF] text-[#00A844]">{filtered.length} records</span>
           <button onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[#00C853] text-white text-sm font-medium hover:bg-[#00B347] transition-colors">
@@ -134,13 +134,13 @@ function TransactionsPage() {
         </div>
       </div>
 
-      <div className="flex gap-5">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-5">
         {/* Filter sidebar */}
         <AnimatePresence>
           {showFilters && (
-            <motion.div initial={{ opacity: 0, x: -20, width: 0 }} animate={{ opacity: 1, x: 0, width: 260 }} exit={{ opacity: 0, x: -20, width: 0 }}
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="flex-shrink-0 bg-white rounded-2xl border border-[#E8E6E0] p-5 h-fit sticky top-24 overflow-hidden"
+              className="w-full lg:w-[260px] flex-shrink-0 bg-white rounded-2xl border border-[#E8E6E0] p-4 sm:p-5 h-fit lg:sticky lg:top-24 overflow-hidden"
               style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}
             >
               <div className="flex items-center justify-between mb-4">
