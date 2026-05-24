@@ -40,7 +40,7 @@ function EmptyState({ message }: { message: string }) {
 
 function LiveFeedPage() {
   const [selected, setSelected] = useState<Transaction | null>(null);
-  const { transactions, loading: txLoading } = useTransactions();
+  const { transactions, loading: txLoading, reviewTransaction } = useTransactions();
   const { alerts,       loading: alLoading } = useAlerts();
 
   const anomalies  = transactions.filter((t) => t.isAnomaly).length;
@@ -166,7 +166,12 @@ function LiveFeedPage() {
         </div>
       </div>
 
-      <ExplainabilityDrawer transaction={selected} onClose={() => setSelected(null)} />
+      <ExplainabilityDrawer
+        transaction={selected}
+        onClose={() => setSelected(null)}
+        onReview={reviewTransaction}
+        onReviewed={setSelected}
+      />
     </AppLayout>
     </AdminRoute>
   );

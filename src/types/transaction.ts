@@ -1,5 +1,5 @@
 export type RiskLevel = "low" | "medium" | "high";
-export type TxStatus = "Normal" | "Anomaly";
+export type TxStatus = "Normal" | "Suspicious" | "Anomalous" | "Anomaly";
 export type Category =
   | "Shopping"
   | "Food"
@@ -22,7 +22,12 @@ export interface Transaction {
   location: string;
   paymentMethod: PaymentMethod;
   riskScore: number;
+  ruleScore?: number;
+  mlScore?: number;
+  finalScore?: number;
+  detectionMethod?: string;
   confidenceLevel: number;
+  confidenceLabel?: string;
   isAnomaly: boolean;
   status: TxStatus;
   explanation: string[];
@@ -41,9 +46,7 @@ export interface CreateTransactionInput {
   paymentMethod: PaymentMethod;
   ipAddress?: string;
   deviceFingerprint?: string;
-  /** Optional context for scoring (user history) */
-  userAvg?: number;
-  knownLocations?: string[];
+  homeLocation?: string;
 }
 
 export interface FraudTimelineEvent {

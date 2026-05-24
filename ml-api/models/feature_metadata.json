@@ -1,0 +1,14 @@
+{
+  "feature_count": 8,
+  "sample_count": 20,
+  "features": [
+    "log_amount",
+    "payment_method_risk",
+    "transaction_hour",
+    "location_risk",
+    "device_change",
+    "velocity_1h",
+    "failed_login_attempts",
+    "ip_mismatch"
+  ]
+}

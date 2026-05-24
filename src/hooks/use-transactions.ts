@@ -1,17 +1,27 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useId } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchTransactions,
   createTransaction,
+  reviewTransaction as reviewTransactionInDb,
 } from "@/services/transactionService";
 import type { CreateTransactionInput, Transaction } from "@/types/transaction";
 import { mapTransactionRow } from "@/lib/transaction-mapper";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/currency";
 
+function removeChannelByTopic(topic: string) {
+  const existing = supabase.getChannels().find((c) => c.topic === topic);
+  if (existing) {
+    void supabase.removeChannel(existing);
+  }
+}
+
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const instanceId = useId().replace(/:/g, "");
 
   const load = useCallback(async () => {
     const {
@@ -52,16 +62,20 @@ export function useTransactions() {
   }, [load]);
 
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    let channel: RealtimeChannel | null = null;
 
     const setup = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (cancelled || !user) return;
+
+      const topic = `transactions-realtime-${user.id}-${instanceId}`;
+      removeChannelByTopic(topic);
 
       channel = supabase
-        .channel(`transactions-realtime-${user.id}`)
+        .channel(topic)
         .on(
           "postgres_changes",
           {
@@ -81,15 +95,49 @@ export function useTransactions() {
             }
           },
         )
-        .subscribe();
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "transactions",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const tx = mapTransactionRow(payload.new as Record<string, unknown>);
+            setTransactions((prev) =>
+              prev.map((t) => (t.id === tx.id ? tx : t)),
+            );
+          },
+        );
+
+      if (cancelled) {
+        void supabase.removeChannel(channel);
+        channel = null;
+        return;
+      }
+
+      channel.subscribe();
     };
 
-    setup();
+    void setup();
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
-  }, []);
+  }, [instanceId]);
+
+  const reviewTransaction = async (
+    id: string,
+    isAnomaly: boolean,
+  ): Promise<Transaction> => {
+    const updated = await reviewTransactionInDb(id, isAnomaly);
+    setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    return updated;
+  };
 
   const addTransaction = async (input: CreateTransactionInput): Promise<Transaction> => {
     const {
@@ -105,5 +153,5 @@ export function useTransactions() {
     return saved;
   };
 
-  return { transactions, loading, addTransaction, reload: load };
+  return { transactions, loading, addTransaction, reviewTransaction, reload: load };
 }

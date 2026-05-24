@@ -6,7 +6,10 @@ import { AMOUNT_INPUT_LABEL } from "@/lib/currency";
 import { MAHARASHTRA_LOCATIONS } from "@/lib/locations";
 import { useTransactions } from "@/hooks/use-transactions";
 import type { Category, PaymentMethod } from "@/types/transaction";
-import type { RiskResult } from "@/lib/risk";
+import { TRUSTED_RISK_THRESHOLD } from "@/types/behavior";
+import { buildBehaviorProfile } from "@/utils/userBehaviorProfile";
+import type { TransactionAnalysisResult } from "@/utils/anomalyDetection";
+import { formatINR } from "@/lib/currency";
 
 const MERCHANTS = [
   "Amazon",
@@ -20,7 +23,7 @@ const MERCHANTS = [
   "Unknown Vendor",
 ];
 const LOCATIONS = [...MAHARASHTRA_LOCATIONS];
-const METHODS = ["Card", "Bank Transfer", "Crypto", "Wallet"] as const;
+const METHODS = ["UPI", "Card", "Bank Transfer", "Wallet", "Crypto"] as const;
 
 export function TransactionSimulator() {
   const { transactions, addTransaction } = useTransactions();
@@ -30,19 +33,18 @@ export function TransactionSimulator() {
   const [location, setLocation] = useState(LOCATIONS[0]);
   const [method, setMethod] = useState<(typeof METHODS)[number]>(METHODS[0]);
   const [simLoading, setSimLoading] = useState(false);
-  const [result, setResult] = useState<RiskResult | null>(null);
+  const [result, setResult] = useState<TransactionAnalysisResult | null>(null);
 
-  const userAvg = useMemo(
-    () =>
-      transactions.length
-        ? transactions.reduce((s, t) => s + t.amount, 0) / transactions.length
-        : 0,
-    [transactions],
-  );
-  const knownLocations = useMemo(
-    () => Array.from(new Set(transactions.map((t) => t.location))),
-    [transactions],
-  );
+  const behaviorProfile = useMemo(() => {
+    const trusted = transactions
+      .filter((t) => t.riskScore < TRUSTED_RISK_THRESHOLD)
+      .map((t) => ({
+        amount: t.amount,
+        location: t.location,
+        type: t.paymentMethod,
+      }));
+    return buildBehaviorProfile(trusted);
+  }, [transactions]);
 
   const handleSimulate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,21 +58,33 @@ export function TransactionSimulator() {
         location,
         category: "Shopping" as Category,
         paymentMethod: method as PaymentMethod,
-        userAvg: userAvg || undefined,
-        knownLocations: knownLocations.length ? knownLocations : undefined,
       });
 
+      const contributes = saved.riskScore < TRUSTED_RISK_THRESHOLD;
+
       setResult({
-        score: saved.riskScore,
-        confidence: saved.confidenceLevel,
+        risk_score: saved.riskScore,
+        status:
+          saved.status === "Anomaly"
+            ? "Anomalous"
+            : (saved.status as TransactionAnalysisResult["status"]),
         reasons: saved.explanation,
-        isAnomaly: saved.isAnomaly,
+        confidence:
+          (saved.confidenceLabel as TransactionAnalysisResult["confidence"]) ??
+          (saved.riskScore >= 60
+            ? "High Risk"
+            : saved.riskScore >= 30
+              ? "Medium Risk"
+              : "Low Risk"),
+        contributesToProfile: contributes,
       });
 
       toast.success(
         saved.isAnomaly
-          ? "Anomaly detected — saved for analysis"
-          : "Transaction analyzed and saved",
+          ? "Anomalous — flagged, not added to trusted baseline"
+          : saved.status === "Suspicious"
+            ? "Suspicious — flagged, not added to trusted baseline"
+            : "Normal — saved and included in behavioral learning",
       );
     } catch {
       toast.error("Could not save transaction.");
@@ -94,9 +108,24 @@ export function TransactionSimulator() {
           </div>
           <div>
             <h2 className="font-semibold text-[#0A0A0A]">New Transaction</h2>
-            <p className="text-xs text-[#6B6B6B]">Risk scoring runs in the service layer</p>
+            <p className="text-xs text-[#6B6B6B]">
+              Compared to trusted history only (score &lt; {TRUSTED_RISK_THRESHOLD})
+            </p>
           </div>
         </div>
+
+        {behaviorProfile.normalTransactionCount > 0 ? (
+          <div className="mb-4 rounded-xl bg-[#F8F7F4] border border-[#E8E6E0] px-3 py-2.5 text-xs text-[#6B6B6B]">
+            Trusted baseline: {behaviorProfile.normalTransactionCount} transactions · avg{" "}
+            {formatINR(behaviorProfile.averageAmount, 0)} · median{" "}
+            {formatINR(behaviorProfile.medianAmount, 0)} · home{" "}
+            {behaviorProfile.primaryHomeLocation.split(",")[0]}
+          </div>
+        ) : (
+          <div className="mb-4 rounded-xl bg-[#FFF4E5] border border-[#FFD9A0] px-3 py-2.5 text-xs text-[#CC7700]">
+            No trusted history yet — first normal transactions build your baseline.
+          </div>
+        )}
 
         <form onSubmit={handleSimulate} className="space-y-4">
           <div>
@@ -171,9 +200,11 @@ export function TransactionSimulator() {
         transition={{ duration: 0.35, delay: 0.08 }}
         className={`rounded-3xl border p-6 flex flex-col min-h-[320px] ${
           result
-            ? result.isAnomaly
+            ? result.status === "Anomalous"
               ? "bg-[#0b0b0b] border-[#333] text-white"
-              : "bg-white/80 backdrop-blur-xl border-[#E8E6E0]"
+              : result.status === "Suspicious"
+                ? "bg-[#FFF4E5] border-[#FFD9A0]"
+                : "bg-white/80 backdrop-blur-xl border-[#E8E6E0]"
             : "bg-[#F8F7F4]/80 backdrop-blur-xl border-dashed border-[#E8E6E0]"
         }`}
         style={{ boxShadow: result ? "0 2px 24px rgba(0,0,0,0.08)" : undefined }}
@@ -194,22 +225,36 @@ export function TransactionSimulator() {
               <div>
                 <span
                   className={`text-xs font-bold uppercase tracking-wider ${
-                    result.isAnomaly ? "text-[#FF3B30]" : "text-[#00C853]"
+                    result.status === "Anomalous"
+                      ? "text-[#FF3B30]"
+                      : result.status === "Suspicious"
+                        ? "text-[#CC7700]"
+                        : "text-[#00C853]"
                   }`}
                 >
-                  {result.isAnomaly ? "Anomaly Detected" : "Looks Clean"}
+                  {result.status}
                 </span>
-                <p className={`text-xs mt-1 ${result.isAnomaly ? "text-white/50" : "text-[#6B6B6B]"}`}>
-                  Confidence {result.confidence}%
+                <p
+                  className={`text-xs mt-1 ${
+                    result.status === "Anomalous" ? "text-white/50" : "text-[#6B6B6B]"
+                  }`}
+                >
+                  {result.confidence}
                 </p>
               </div>
               <div className="text-right">
                 <span
-                  className={`text-4xl font-bold tabular-nums ${result.isAnomaly ? "text-white" : "text-[#0A0A0A]"}`}
+                  className={`text-4xl font-bold tabular-nums ${
+                    result.status === "Anomalous" ? "text-white" : "text-[#0A0A0A]"
+                  }`}
                 >
-                  {result.score}
+                  {result.risk_score}
                 </span>
-                <span className={`text-sm ${result.isAnomaly ? "text-white/40" : "text-[#6B6B6B]"}`}>
+                <span
+                  className={`text-sm ${
+                    result.status === "Anomalous" ? "text-white/40" : "text-[#6B6B6B]"
+                  }`}
+                >
                   /100
                 </span>
               </div>
@@ -217,18 +262,32 @@ export function TransactionSimulator() {
 
             <div className="flex-1 space-y-2 overflow-y-auto">
               <p
-                className={`text-xs font-medium mb-2 ${result.isAnomaly ? "text-white/60" : "text-[#6B6B6B]"}`}
+                className={`text-xs font-medium mb-2 ${
+                  result.status === "Anomalous" ? "text-white/60" : "text-[#6B6B6B]"
+                }`}
               >
-                Why flagged?
+                {result.reasons.length ? "Why flagged?" : "No risk signals"}
               </p>
+              {result.contributesToProfile ? (
+                <p className="text-xs text-[#00A844] mb-2 font-medium">
+                  ✓ Will update trusted behavioral profile
+                </p>
+              ) : (
+                <p className="text-xs text-[#FF9500] mb-2 font-medium">
+                  ✗ Excluded from averages &amp; learning
+                </p>
+              )}
               <ul className="space-y-2">
-                {result.reasons.map((r, i) => (
+                {(result.reasons.length ? result.reasons : ["No risk signals detected"]).map(
+                  (r, i) => (
                   <li
                     key={i}
                     className={`text-xs rounded-xl px-3 py-2.5 leading-relaxed list-none flex gap-2 before:content-['•'] before:font-bold ${
-                      result.isAnomaly
+                      result.status === "Anomalous"
                         ? "bg-white/10 text-white/90 before:text-[#FF3B30]"
-                        : "bg-[#F0EFEA] text-[#0A0A0A] before:text-[#00C853]"
+                        : result.status === "Suspicious"
+                          ? "bg-white/60 text-[#0A0A0A] before:text-[#FF9500]"
+                          : "bg-[#F0EFEA] text-[#0A0A0A] before:text-[#00C853]"
                     }`}
                   >
                     <span>{r}</span>

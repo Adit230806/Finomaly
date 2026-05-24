@@ -5,6 +5,8 @@ type Status = AlertStatus | TxStatus | string;
 
 const MAP: Record<string, string> = {
   Normal:         "bg-[#E8F9EF] text-[#00A844] border-[#B8EDD0]",
+  Suspicious:     "bg-[#FFF4E5] text-[#CC7700] border-[#FFD9A0]",
+  Anomalous:      "bg-[#FFF0EE] text-[#CC2200] border-[#FFBDB8]",
   Anomaly:        "bg-[#FFF0EE] text-[#CC2200] border-[#FFBDB8]",
   New:            "bg-[#EEF4FF] text-[#2255CC] border-[#C0D0FF]",
   "Under Review": "bg-[#FFF4E5] text-[#CC7700] border-[#FFD9A0]",

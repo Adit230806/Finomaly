@@ -21,7 +21,7 @@ const SEV_FILTERS: (AlertSeverity | "All")[] = ["All", "high", "medium", "low"];
 
 function AlertsPage() {
   const { alerts: liveAlerts, changeStatus } = useAlerts();
-  const { transactions } = useTransactions();
+  const { transactions, reviewTransaction } = useTransactions();
   const [rows,       setRows]       = useState<Alert[]>([]);
   const [statusTab,  setStatusTab]  = useState<AlertStatus | "All">("All");
   const [sevFilter,  setSevFilter]  = useState<AlertSeverity | "All">("All");
@@ -199,7 +199,15 @@ function AlertsPage() {
                         ))}
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => updateStatus(a.id, "Confirmed")}
+                        <button
+                          onClick={async () => {
+                            await updateStatus(a.id, "Confirmed");
+                            try {
+                              await reviewTransaction(a.transactionId, true);
+                            } catch {
+                              toast.error("Alert updated but transaction review failed.");
+                            }
+                          }}
                           className="px-4 py-2 rounded-xl bg-[#FF3B30] text-white text-xs font-semibold hover:bg-[#CC2200] transition-colors">
                           Confirm Anomaly
                         </button>
@@ -221,7 +229,12 @@ function AlertsPage() {
         </AnimatePresence>
       </div>
 
-      <ExplainabilityDrawer transaction={drawerTx} onClose={() => setDrawerTx(null)} />
+      <ExplainabilityDrawer
+        transaction={drawerTx}
+        onClose={() => setDrawerTx(null)}
+        onReview={reviewTransaction}
+        onReviewed={setDrawerTx}
+      />
     </AppLayout>
     </AdminRoute>
   );

@@ -21,7 +21,19 @@ Supabase
 
 ### Service-owned fraud logic
 
-The UI never calls `scoreTransaction()` directly for persistence. `createTransaction()` in `transactionService.ts` runs scoring, writes `risk_score`, `confidence`, `anomaly_reasons`, and creates alerts when thresholds are met.
+The UI never calls `analyzeTransaction()` directly for persistence. `createTransaction()` in `transactionService.ts` runs `src/utils/anomalyDetection.ts`, which scores on:
+
+| Signal | Rule |
+|--------|------|
+| **Amount** | vs trusted median/avg + 2σ; absolute &gt; ₹20,000 |
+| **Location** | Not in trusted location history |
+| **Type** | Not in common trusted types; Crypto / large bank transfer |
+
+**Learning rule:** only transactions with **risk score &lt; 30** update the behavioral profile (last 30 trusted rows). Anomalies are flagged and excluded from averages.
+
+**Hybrid ML (production):** FastAPI + Isolation Forest (`ml-api/`) — `finalScore = ruleScore×0.4 + mlScore×0.6`. See `ML_DEPLOYMENT.md`.
+
+Status: `Normal` (&lt;30) · `Suspicious` (30–59) · `Anomalous` (≥60)
 
 ### Persisted explainability
 

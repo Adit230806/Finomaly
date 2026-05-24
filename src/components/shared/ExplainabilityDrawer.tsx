@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, MapPin, Clock, IndianRupee, CheckCircle2 } from "lucide-react";
+import { X, AlertTriangle, MapPin, Clock, IndianRupee, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { Transaction } from "@/types/transaction";
 import { formatINR } from "@/lib/currency";
 import { RiskBadge } from "./RiskBadge";
@@ -12,6 +14,10 @@ interface Props {
   transaction: Transaction | null;
   onClose: () => void;
   hasAlert?: boolean;
+  /** Persist manual anomaly / safe review to the database */
+  onReview?: (id: string, isAnomaly: boolean) => Promise<Transaction>;
+  /** Called after a successful review so parents can refresh selected row */
+  onReviewed?: (transaction: Transaction) => void;
 }
 
 function RiskGauge({ score }: { score: number }) {
@@ -85,8 +91,34 @@ function getSeverityChip(reason: string, score: number) {
   );
 }
 
-export function ExplainabilityDrawer({ transaction: tx, onClose, hasAlert }: Props) {
+export function ExplainabilityDrawer({
+  transaction: tx,
+  onClose,
+  hasAlert,
+  onReview,
+  onReviewed,
+}: Props) {
+  const [saving, setSaving] = useState<"anomaly" | "safe" | null>(null);
   const timeline = tx ? buildFraudTimeline(tx, { hasAlert }) : [];
+
+  const handleReview = async (isAnomaly: boolean) => {
+    if (!tx || !onReview || saving) return;
+    setSaving(isAnomaly ? "anomaly" : "safe");
+    try {
+      const updated = await onReview(tx.id, isAnomaly);
+      onReviewed?.(updated);
+      toast.success(
+        isAnomaly
+          ? "Marked as anomaly — excluded from trusted baseline"
+          : "Marked as safe — included in behavioral learning",
+      );
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Could not save review";
+      toast.error(message);
+    } finally {
+      setSaving(null);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -124,6 +156,25 @@ export function ExplainabilityDrawer({ transaction: tx, onClose, hasAlert }: Pro
                 <StatusBadge status={tx.status} />
                 <span className="text-xs text-[#6B6B6B]">{format(new Date(tx.timestamp), "PPp")}</span>
               </div>
+
+              {(tx.ruleScore != null || tx.mlScore != null) && (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="bg-[#F8F7F4] rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-[#6B6B6B]">Rule (40%)</p>
+                    <p className="text-lg font-bold text-[#0A0A0A]">{tx.ruleScore ?? "—"}</p>
+                  </div>
+                  <div className="bg-[#F8F7F4] rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-[#6B6B6B]">ML (60%)</p>
+                    <p className="text-lg font-bold text-[#0A0A0A]">{tx.mlScore ?? "—"}</p>
+                  </div>
+                  <div className="bg-[#F0EFEA] rounded-xl p-3 text-center border border-[#E8E6E0]">
+                    <p className="text-[10px] text-[#6B6B6B]">Final</p>
+                    <p className="text-lg font-bold text-[#0A0A0A]">
+                      {tx.finalScore ?? tx.riskScore}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div
                 className={`rounded-2xl p-5 text-center ${tx.riskScore >= 71 ? "bg-[#FFF0EE]" : tx.riskScore >= 31 ? "bg-[#FFF4E5]" : "bg-[#E8F9EF]"}`}
@@ -202,14 +253,40 @@ export function ExplainabilityDrawer({ transaction: tx, onClose, hasAlert }: Pro
                 <FraudTimeline events={timeline} />
               </div>
 
-              <div className="flex gap-3 pb-4">
-                <button className="flex-1 h-11 rounded-xl bg-[#FF3B30] text-white font-semibold text-sm hover:bg-[#CC2200] transition-colors flex items-center justify-center gap-2">
-                  <AlertTriangle size={15} /> Confirm Anomaly
-                </button>
-                <button className="flex-1 h-11 rounded-xl bg-[#00C853] text-white font-semibold text-sm hover:bg-[#00A844] transition-colors flex items-center justify-center gap-2">
-                  <CheckCircle2 size={15} /> Mark as Safe
-                </button>
-              </div>
+              {onReview ? (
+                <div className="flex gap-3 pb-4">
+                  <button
+                    type="button"
+                    disabled={!!saving || tx.isAnomaly}
+                    onClick={() => void handleReview(true)}
+                    className="flex-1 h-11 rounded-xl bg-[#FF3B30] text-white font-semibold text-sm hover:bg-[#CC2200] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {saving === "anomaly" ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <AlertTriangle size={15} />
+                    )}
+                    {tx.isAnomaly ? "Confirmed Anomaly" : "Confirm Anomaly"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!!saving || (!tx.isAnomaly && tx.riskScore < 30)}
+                    onClick={() => void handleReview(false)}
+                    className="flex-1 h-11 rounded-xl bg-[#00C853] text-white font-semibold text-sm hover:bg-[#00A844] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {saving === "safe" ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={15} />
+                    )}
+                    Mark as Safe
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-[#6B6B6B] pb-4">
+                  Sign in to review and update anomaly status.
+                </p>
+              )}
             </div>
           </motion.div>
         </div>

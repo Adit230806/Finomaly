@@ -68,7 +68,7 @@ function HeatmapCell({ avgRisk }: { avgRisk: number }) {
 
 function AdminDashboardPage() {
   const { currentUser } = useAuth();
-  const { transactions, loading } = useTransactions();
+  const { transactions, loading, reviewTransaction } = useTransactions();
   const { alerts, changeStatus } = useAlerts();
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [tf, setTf] = useState<TF>("30D");
@@ -704,6 +704,8 @@ function AdminDashboardPage() {
           hasAlert={
             selected ? alerts.some((a) => a.transactionId === selected.id) : false
           }
+          onReview={reviewTransaction}
+          onReviewed={setSelected}
         />
       </AppLayout>
     </AdminRoute>

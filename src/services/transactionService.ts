@@ -1,6 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
-import { scoreTransaction } from "@/lib/risk";
+import {
+  fetchTrustedTransactionRefs,
+  fetchUserBehaviorProfile,
+} from "@/services/behaviorProfileService";
 import { insertAlert } from "@/services/alertService";
+import { scoreTransactionHybrid } from "@/services/mlRiskService";
 import { mapTransactionRow } from "@/lib/transaction-mapper";
 import type { CreateTransactionInput, Transaction } from "@/types/transaction";
 
@@ -29,8 +33,11 @@ export async function fetchTransactions(): Promise<Transaction[]> {
 }
 
 /**
- * Creates a transaction: scores risk in the service layer, persists all signals,
- * and auto-generates alerts for high-risk events.
+ * Hybrid fraud pipeline:
+ * 1. Load trusted history only (never anomalies)
+ * 2. Rule engine + Isolation Forest via FastAPI
+ * 3. finalScore = 0.4*rule + 0.6*ml
+ * 4. Persist — flagged txs excluded from future learning
  */
 export async function createTransaction(
   input: CreateTransactionInput,
@@ -40,14 +47,30 @@ export async function createTransaction(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const result = scoreTransaction({
+  const [profile, trustedRows] = await Promise.all([
+    fetchUserBehaviorProfile(user.id),
+    fetchTrustedTransactionRefs(user.id),
+  ]);
+
+  const deviceFp = input.deviceFingerprint ?? defaultDeviceFingerprint();
+
+  const result = await scoreTransactionHybrid({
+    userId: user.id,
     amount: input.amount,
+    paymentMethod: input.paymentMethod,
     location: input.location,
     merchant: input.merchant,
-    payment_method: input.paymentMethod,
-    userAvg: input.userAvg,
-    knownLocations: input.knownLocations,
+    category: input.category,
+    ipAddress: input.ipAddress ?? "client",
+    deviceFingerprint: deviceFp,
+    failedLoginAttempts: 0,
+    homeLocation: input.homeLocation,
+    trustedProfile: profile,
+    trustedRows,
   });
+
+  const isAnomaly = result.isAnomaly;
+  const status = result.status;
 
   const payload = {
     user_id: user.id,
@@ -57,14 +80,20 @@ export async function createTransaction(
     category: input.category,
     location: input.location,
     payment_method: input.paymentMethod,
-    risk_score: result.score,
-    confidence_level: result.confidence,
-    confidence: result.confidence,
-    is_anomaly: result.isAnomaly,
+    risk_score: result.final_score,
+    rule_score: result.rule_score,
+    ml_score: result.ml_score,
+    final_score: result.final_score,
+    detection_method: result.detectionMethod,
+    risk_status: status,
+    confidence_level: result.confidenceLevel,
+    confidence: result.confidenceLevel,
+    confidence_label: result.confidence,
+    is_anomaly: isAnomaly,
     explanation: result.reasons,
     anomaly_reasons: result.reasons,
     ip_address: input.ipAddress ?? "client",
-    device_fingerprint: input.deviceFingerprint ?? defaultDeviceFingerprint(),
+    device_fingerprint: deviceFp,
   };
 
   const { data, error } = await supabase
@@ -77,22 +106,21 @@ export async function createTransaction(
 
   const inserted = mapTransactionRow(data as Record<string, unknown>);
 
-  if (result.isAnomaly || result.score > 80) {
+  if (isAnomaly || status === "Suspicious") {
     await insertAlert({
       transaction_id: inserted.id,
       user_id: inserted.userId,
       email: user.email ?? "",
-      risk_score: result.score,
+      risk_score: result.final_score,
       reason:
         result.reasons[0] ??
-        `High risk: ${inserted.merchant} (score ${result.score})`,
+        `${status}: ${inserted.merchant} (score ${result.final_score})`,
     });
   }
 
   return inserted;
 }
 
-/** @deprecated Use createTransaction — kept for gradual migration */
 export async function insertTransaction(
   tx: Omit<Transaction, "id" | "timestamp" | "userId">,
 ): Promise<Transaction> {
@@ -102,22 +130,76 @@ export async function insertTransaction(
     category: tx.category,
     location: tx.location,
     paymentMethod: tx.paymentMethod,
-    userAvg: undefined,
-    knownLocations: undefined,
   });
 }
 
+/** Manual review: confirm fraud or mark as trusted normal */
+export async function reviewTransaction(
+  id: string,
+  isAnomaly: boolean,
+): Promise<Transaction> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("transactions")
+    .select("explanation, anomaly_reasons")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (fetchError) throw new Error(fetchError.message);
+
+  const priorReasons =
+    (existing?.anomaly_reasons as string[] | undefined)?.length
+      ? (existing.anomaly_reasons as string[])
+      : ((existing?.explanation as string[]) ?? []);
+
+  const reviewNote = isAnomaly
+    ? "Manually confirmed as anomaly by reviewer"
+    : "Manually marked as safe by reviewer";
+
+  const reasons = priorReasons.includes(reviewNote)
+    ? priorReasons
+    : [...priorReasons, reviewNote];
+
+  const riskScore = isAnomaly ? 85 : 8;
+  const riskStatus = isAnomaly ? "Anomalous" : "Normal";
+  const confidenceLabel = isAnomaly ? "High Risk" : "Low Risk";
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .update({
+      is_anomaly: isAnomaly,
+      risk_status: riskStatus,
+      risk_score: riskScore,
+      rule_score: riskScore,
+      ml_score: riskScore,
+      final_score: riskScore,
+      confidence_level: isAnomaly ? 92 : 96,
+      confidence: isAnomaly ? 92 : 96,
+      confidence_label: confidenceLabel,
+      explanation: reasons,
+      anomaly_reasons: reasons,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapTransactionRow(data as Record<string, unknown>);
+}
+
+/** @deprecated Use reviewTransaction */
 export async function updateTransactionAnomaly(
   id: string,
   isAnomaly: boolean,
 ): Promise<void> {
-  const { error } = await supabase
-    .from("transactions")
-    .update({ is_anomaly: isAnomaly })
-    .eq("id", id);
-
-  if (error) throw new Error(error.message);
+  await reviewTransaction(id, isAnomaly);
 }
 
-export type { RiskResult } from "@/lib/risk";
-export { scoreTransaction } from "@/lib/risk";
+export { fetchUserBehaviorProfile, fetchTrustedTransactionRefs } from "@/services/behaviorProfileService";
+export { scoreTransactionHybrid, isMLApiConfigured } from "@/services/mlRiskService";

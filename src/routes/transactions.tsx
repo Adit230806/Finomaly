@@ -34,7 +34,8 @@ function TransactionsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
 
-  const { transactions, loading: txLoading, addTransaction } = useTransactions();
+  const { transactions, loading: txLoading, addTransaction, reviewTransaction } =
+    useTransactions();
 
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -62,7 +63,12 @@ function TransactionsPage() {
         return riskLevels.includes(lvl);
       });
     }
-    if (statuses.length)   rows = rows.filter((t) => statuses.includes(t.status));
+    if (statuses.length) {
+      rows = rows.filter((t) => {
+        const label = t.status === "Anomaly" ? "Anomalous" : t.status;
+        return statuses.includes(t.status) || statuses.includes(label);
+      });
+    }
     if (categories.length) rows = rows.filter((t) => categories.includes(t.category));
     if (methods.length)    rows = rows.filter((t) => methods.includes(t.paymentMethod));
     if (minAmt) rows = rows.filter((t) => t.amount >= Number(minAmt));
@@ -170,7 +176,7 @@ function TransactionsPage() {
 
               {/* Status */}
               <FilterSection label="Status">
-                {["Normal","Anomaly"].map((s) => (
+                {["Normal", "Suspicious", "Anomalous", "Anomaly"].map((s) => (
                   <CheckItem key={s} label={s} checked={statuses.includes(s)} onChange={() => toggleArr(statuses, s, setStatuses)} />
                 ))}
               </FilterSection>
@@ -277,7 +283,12 @@ function TransactionsPage() {
         </div>
       </div>
 
-      <ExplainabilityDrawer transaction={selected} onClose={() => setSelected(null)} />
+      <ExplainabilityDrawer
+        transaction={selected}
+        onClose={() => setSelected(null)}
+        onReview={reviewTransaction}
+        onReviewed={setSelected}
+      />
       {showAddModal && (
         <AddTransactionModal
           onClose={() => setShowAddModal(false)}

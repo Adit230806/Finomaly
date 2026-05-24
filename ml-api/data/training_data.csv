@@ -1,0 +1,24 @@
+amount,payment_method,location,ip_address,device_fingerprint,failed_login_attempts,home_location,is_anomaly,risk_score,timestamp
+450,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,5,2026-05-01T09:00:00
+320,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,8,2026-05-01T11:30:00
+890,Card,Pune MH,192.168.1.10,device-1,0,Pune MH,0,12,2026-05-02T14:00:00
+150,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,4,2026-05-02T18:00:00
+2200,Card,Pune MH,192.168.1.10,device-1,0,Pune MH,0,15,2026-05-03T10:00:00
+680,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,6,2026-05-03T12:00:00
+1200,Wallet,Pune MH,192.168.1.10,device-1,0,Pune MH,0,10,2026-05-04T09:30:00
+540,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,7,2026-05-04T15:00:00
+1800,Card,Pune MH,192.168.1.10,device-1,0,Pune MH,0,14,2026-05-05T11:00:00
+420,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,5,2026-05-05T19:00:00
+950,UPI,Mumbai MH,192.168.1.10,device-1,0,Pune MH,0,18,2026-05-06T08:00:00
+2100,Card,Pune MH,192.168.1.10,device-1,0,Pune MH,0,16,2026-05-06T13:00:00
+380,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,4,2026-05-07T10:00:00
+760,Wallet,Pune MH,192.168.1.10,device-1,0,Pune MH,0,9,2026-05-07T16:00:00
+1100,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,11,2026-05-08T09:00:00
+2500,Bank Transfer,Pune MH,192.168.1.10,device-1,0,Pune MH,0,22,2026-05-08T14:00:00
+590,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,6,2026-05-09T11:00:00
+840,Card,Pune MH,192.168.1.10,device-1,0,Pune MH,0,8,2026-05-09T17:00:00
+1350,UPI,Pune MH,192.168.1.10,device-1,0,Pune MH,0,13,2026-05-10T10:00:00
+720,Wallet,Pune MH,192.168.1.10,device-1,0,Pune MH,0,7,2026-05-10T15:00:00
+98000,Crypto,Lagos NG,203.0.113.50,device-unknown,5,Pune MH,1,92,2026-05-11T02:00:00
+75000,Bank Transfer,Mumbai MH,198.51.100.9,device-unknown,3,Pune MH,1,88,2026-05-11T03:00:00
+120000,Card,Unknown,45.33.32.156,device-hack,8,Pune MH,1,95,2026-05-11T04:00:00
