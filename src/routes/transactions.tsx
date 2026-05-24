@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { Search, ChevronUp, ChevronDown, Download, SlidersHorizontal, X, Plus } from "lucide-react";
 import { useEffect } from "react";
 import { formatINR, AMOUNT_INPUT_LABEL } from "@/lib/currency";
+import { MAHARASHTRA_LOCATIONS } from "@/lib/locations";
 
 export const Route = createFileRoute("/transactions")({ component: TransactionsPage });
 
@@ -322,7 +323,7 @@ function AddTransactionModal({
   const [form, setForm] = useState({
     merchant:      "",
     amount:        "",
-    location:      "",
+    location:      MAHARASHTRA_LOCATIONS[0],
     category:      "Shopping" as Category,
     paymentMethod: "Card" as PaymentMethod,
   });
@@ -367,8 +368,18 @@ function AddTransactionModal({
 
           <div>
             <label className="text-xs font-medium text-[#333] mb-1 block">Location *</label>
-            <input required value={form.location} onChange={(e) => set("location", e.target.value)}
-              placeholder="Mumbai" className={FIELD_CLS} />
+            <select
+              required
+              value={form.location}
+              onChange={(e) => set("location", e.target.value)}
+              className={FIELD_CLS}
+            >
+              {MAHARASHTRA_LOCATIONS.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

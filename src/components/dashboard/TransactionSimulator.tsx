@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { AMOUNT_INPUT_LABEL } from "@/lib/currency";
+import { MAHARASHTRA_LOCATIONS } from "@/lib/locations";
 import { useTransactions } from "@/hooks/use-transactions";
 import type { Category, PaymentMethod } from "@/types/transaction";
 import type { RiskResult } from "@/lib/risk";
@@ -18,15 +19,7 @@ const MERCHANTS = [
   "Binance",
   "Unknown Vendor",
 ];
-const LOCATIONS = [
-  "New York, US",
-  "San Francisco, US",
-  "London, UK",
-  "Tokyo, JP",
-  "Berlin, DE",
-  "Lagos, NG",
-  "Dubai, AE",
-];
+const LOCATIONS = [...MAHARASHTRA_LOCATIONS];
 const METHODS = ["Card", "Bank Transfer", "Crypto", "Wallet"] as const;
 
 export function TransactionSimulator() {
