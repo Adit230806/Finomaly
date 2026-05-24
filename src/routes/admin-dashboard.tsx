@@ -11,17 +11,15 @@ import { LiveMonitoringPanel } from "@/components/dashboard/LiveMonitoringPanel"
 import { useTransactions } from "@/hooks/use-transactions";
 import { useAlerts } from "@/hooks/use-alerts";
 import { useAuth } from "@/hooks/use-auth";
-import { DAY_LABELS } from "@/data/mockData";
 import type { Transaction } from "@/types/transaction";
 import {
   computeFraudMetrics,
-  computeHighRiskMerchants,
   computeFraudByHour,
   computeRiskTrend,
 } from "@/lib/analytics";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import {
   ArrowLeftRight, Shield, Bell, AlertTriangle,
@@ -52,20 +50,6 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-function HeatmapCell({ avgRisk }: { avgRisk: number }) {
-  const r = avgRisk >= 70 ? 255 : avgRisk >= 30 ? 255 : 0;
-  const g = avgRisk >= 70 ? 59 : avgRisk >= 30 ? 149 : 200;
-  const b = avgRisk >= 70 ? 48 : avgRisk >= 30 ? 0 : 83;
-  const alpha = avgRisk / 100;
-  return (
-    <div
-      className="rounded-sm cursor-default transition-transform hover:scale-110"
-      style={{ backgroundColor: `rgba(${r},${g},${b},${0.15 + alpha * 0.7})`, width: "100%", height: "100%" }}
-      title={`Avg Risk: ${avgRisk}`}
-    />
-  );
-}
-
 function AdminDashboardPage() {
   const { currentUser } = useAuth();
   const { transactions, loading, reviewTransaction } = useTransactions();
@@ -83,10 +67,6 @@ function AdminDashboardPage() {
   const totalAmt = useMemo(() => transactions.reduce((s, t) => s + t.amount, 0), [transactions]);
   const peakRisk = useMemo(
     () => (transactions.length ? Math.max(...transactions.map((t) => t.riskScore)) : 0),
-    [transactions],
-  );
-  const highRiskMerchants = useMemo(
-    () => computeHighRiskMerchants(transactions),
     [transactions],
   );
   const fraudByHour = useMemo(() => computeFraudByHour(transactions), [transactions]);
@@ -146,42 +126,6 @@ function AdminDashboardPage() {
       map[tx.category].amount += tx.amount;
     });
     return Object.values(map).sort((a, b) => b.amount - a.amount);
-  }, [transactions]);
-
-  const merchantData = useMemo(() => {
-    const map: Record<string, { merchant: string; count: number }> = {};
-    transactions.forEach((tx) => {
-      if (!map[tx.merchant]) map[tx.merchant] = { merchant: tx.merchant, count: 0 };
-      map[tx.merchant].count++;
-    });
-    return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 8);
-  }, [transactions]);
-
-  const hourlyData = useMemo(() => {
-    const buckets = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0 }));
-    transactions.forEach((tx) => {
-      buckets[new Date(tx.timestamp).getHours()].count++;
-    });
-    return buckets;
-  }, [transactions]);
-
-  const heatmap = useMemo(() => {
-    const grid: Record<string, { total: number; count: number }> = {};
-    transactions.forEach((tx) => {
-      const d = new Date(tx.timestamp);
-      const key = `${d.getDay()}-${d.getHours()}`;
-      if (!grid[key]) grid[key] = { total: 0, count: 0 };
-      grid[key].total += tx.riskScore;
-      grid[key].count++;
-    });
-    const result: { day: number; hour: number; avgRisk: number }[] = [];
-    for (let day = 0; day < 7; day++) {
-      for (let hour = 0; hour < 24; hour++) {
-        const key = `${day}-${hour}`;
-        result.push({ day, hour, avgRisk: grid[key] ? Math.round(grid[key].total / grid[key].count) : 0 });
-      }
-    }
-    return result;
   }, [transactions]);
 
   const riskPie = useMemo(() => {
@@ -479,23 +423,8 @@ function AdminDashboardPage() {
           </ChartCard>
         </div>
 
-        <ChartCard title="High-Risk Merchants" delay={0.14} className="mb-5">
-          {highRiskMerchants.length === 0 ? (
-            <EmptyState message="No elevated merchant risk yet" />
-          ) : (
-            <ResponsiveContainer width="100%" height={Math.max(180, highRiskMerchants.length * 36)}>
-              <BarChart data={highRiskMerchants} layout="vertical">
-                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "#6B6B6B" }} />
-                <YAxis dataKey="merchant" type="category" width={100} tick={{ fontSize: 9, fill: "#6B6B6B" }} />
-                <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
-                <Bar dataKey="avgRisk" name="Avg Risk" fill="#FF9500" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
-
         {/* Advanced analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           <ChartCard title="Spending by Category" delay={0.1}>
             {spendByCategory.length === 0 ? (
               <EmptyState message="No spending data" />
@@ -514,84 +443,7 @@ function AdminDashboardPage() {
               </>
             )}
           </ChartCard>
-
-          <ChartCard title="Merchant Frequency" delay={0.15}>
-            {merchantData.length === 0 ? (
-              <EmptyState message="No merchant data" />
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={merchantData} layout="vertical">
-                  <XAxis type="number" tick={{ fontSize: 10, fill: "#6B6B6B" }} allowDecimals={false} />
-                  <YAxis dataKey="merchant" type="category" tick={{ fontSize: 9, fill: "#6B6B6B" }} width={90} />
-                  <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
-                  <Bar dataKey="count" fill="#00C853" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-
-          <ChartCard title="Activity by Hour" delay={0.2}>
-            {hourlyData.every((d) => d.count === 0) ? (
-              <EmptyState message="No hourly activity" />
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={hourlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F0EFEA" vertical={false} />
-                    <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "#6B6B6B" }} tickFormatter={(h) => `${h}h`} />
-                    <YAxis tick={{ fontSize: 9, fill: "#6B6B6B" }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} labelFormatter={(h) => `${h}:00`} />
-                    <ReferenceLine x={1} stroke="#FF3B30" strokeDasharray="3 3" />
-                    <ReferenceLine x={5} stroke="#FF3B30" strokeDasharray="3 3" />
-                    <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-                      {hourlyData.map((d) => (
-                        <Cell key={d.hour} fill={d.hour >= 1 && d.hour <= 5 ? "#FF3B30" : "#00C853"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <p className="text-[10px] text-[#6B6B6B] mt-1">Red = unusual hours (1AM–5AM)</p>
-              </>
-            )}
-          </ChartCard>
         </div>
-
-        {/* Heatmap */}
-        <ChartCard
-          title="Risk Activity Heatmap"
-          delay={0.25}
-          className="mb-5"
-          headerRight={<p className="text-xs text-[#6B6B6B]">7 days × 24h · your account</p>}
-        >
-          {heatmap.every((c) => c.avgRisk === 0) ? (
-            <EmptyState message="No activity pattern data yet" />
-          ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[280px] sm:min-w-[480px] md:min-w-[600px]">
-                <div className="flex mb-1 ml-10">
-                  {Array.from({ length: 24 }, (_, h) => (
-                    <div key={h} className="flex-1 text-center text-[9px] text-[#6B6B6B]">
-                      {h % 4 === 0 ? `${h}h` : ""}
-                    </div>
-                  ))}
-                </div>
-                {Array.from({ length: 7 }, (_, day) => (
-                  <div key={day} className="flex items-center gap-1 mb-1">
-                    <span className="text-[10px] text-[#6B6B6B] w-9 text-right pr-1 flex-shrink-0">{DAY_LABELS[day]}</span>
-                    {Array.from({ length: 24 }, (_, hour) => {
-                      const cell = heatmap.find((c) => c.day === day && c.hour === hour);
-                      return (
-                        <div key={hour} className="flex-1 h-6">
-                          <HeatmapCell avgRisk={cell?.avgRisk ?? 0} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </ChartCard>
 
         {/* Recent + Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

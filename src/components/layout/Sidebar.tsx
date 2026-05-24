@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ArrowLeftRight,
   Activity,
@@ -10,14 +10,12 @@ import {
   LogOut,
   Sparkles,
   ShieldAlert,
-  LayoutDashboard,
   X,
 } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout } from "@/hooks/use-logout";
 import { useAlerts } from "@/hooks/use-alerts";
-import { defaultPathForMode } from "@/lib/dashboard-mode";
 import { useLayout } from "./layout-context";
 import { cn } from "@/lib/utils";
 
@@ -45,43 +43,16 @@ function NavContent({
   onNavigate?: () => void;
 }) {
   const { pathname } = useRouterState({ select: (s) => s.location });
-  const { currentUser, dashboardMode, setDashboardMode } = useAuth();
+  const { currentUser, dashboardMode } = useAuth();
   const performLogout = useLogout();
   const { alerts } = useAlerts();
-  const nav = useNavigate();
 
   const isAdminView = dashboardMode === "admin";
   const NAV = isAdminView ? ADMIN_NAV : USER_NAV;
   const newAlertCount = alerts.filter((a) => a.status === "New").length;
 
-  const switchMode = () => {
-    const next = isAdminView ? "user" : "admin";
-    setDashboardMode(next);
-    nav({ to: defaultPathForMode(next), replace: true });
-    onNavigate?.();
-  };
-
   return (
     <>
-      <AnimatePresence>
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="px-4 pt-3 pb-1"
-          >
-            <span
-              className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
-                isAdminView ? "bg-[#F3EEFF] text-[#7C3AED]" : "bg-[#E8F9EF] text-[#00A844]"
-              }`}
-            >
-              {isAdminView ? "Admin view" : "User view"}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
         {NAV.map(({ to, label, Icon }) => {
           const active =
@@ -138,26 +109,6 @@ function NavContent({
       </nav>
 
       <div className="border-t border-[#E8E6E0] p-3 flex-shrink-0 space-y-1">
-        <button
-          type="button"
-          onClick={switchMode}
-          className="flex items-center gap-3 h-10 w-full rounded-[10px] px-3 text-[#6B6B6B] hover:bg-[#F0EFEA] hover:text-[#0A0A0A] transition-colors"
-        >
-          <LayoutDashboard size={16} className="flex-shrink-0" />
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-sm font-medium whitespace-nowrap"
-              >
-                {isAdminView ? "User view" : "Admin view"}
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </button>
-
         <AnimatePresence>
           {!collapsed && currentUser && (
             <motion.div

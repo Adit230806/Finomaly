@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouterState, Link } from "@tanstack/react-router";
-import { Search, Bell, Sun, Moon, ChevronDown, Menu } from "lucide-react";
+import { Search, Bell, ChevronDown, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout } from "@/hooks/use-logout";
@@ -38,8 +38,6 @@ export function TopNavbar() {
   const [searchVal, setSearchVal] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
@@ -104,25 +102,6 @@ export function TopNavbar() {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-auto">
-        <button
-          type="button"
-          onClick={() => setDarkMode((v) => !v)}
-          className="hidden sm:flex h-8 w-14 md:w-16 rounded-full bg-[#F0EFEA] border border-[#E8E6E0] items-center px-1 relative transition-colors"
-          aria-label="Toggle theme"
-        >
-          <motion.div
-            animate={{ x: darkMode ? 24 : 0 }}
-            transition={{ type: "spring", damping: 20, stiffness: 300 }}
-            className="h-6 w-6 rounded-full bg-white shadow flex items-center justify-center"
-          >
-            {darkMode ? (
-              <Moon size={12} className="text-[#0A0A0A]" />
-            ) : (
-              <Sun size={12} className="text-[#FF9500]" />
-            )}
-          </motion.div>
-        </button>
-
         <div ref={notifRef} className="relative">
           <button
             type="button"

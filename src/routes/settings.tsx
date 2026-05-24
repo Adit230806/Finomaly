@@ -66,10 +66,8 @@ function SettingsPage() {
   const { currentUser } = useAuth();
   const { display, notifs, setDisplay, setNotifs, saveDisplay: persistDisplay, saveNotifs: persistNotifs, resetAll } = useSettings();
 
-  const theme     = display.theme;
   const layout    = display.layout;
   const timeRange = display.timeRange;
-  const setTheme     = (v: string) => setDisplay({ ...display, theme:     v as typeof display.theme });
   const setLayout    = (v: string) => setDisplay({ ...display, layout:    v as typeof display.layout });
   const setTimeRange = (v: string) => setDisplay({ ...display, timeRange: v as typeof display.timeRange });
   const [name,         setName]         = useState("");
@@ -239,7 +237,6 @@ function SettingsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className={cardClass}>
           <h2 className="font-semibold text-[#0A0A0A] mb-5">Display</h2>
           <div className="space-y-5">
-            <PillGroup label="Theme" options={["Light","Dark","System"]} value={theme} onChange={(v) => setTheme(v as typeof theme)} />
             <PillGroup label="Dashboard Layout" options={["Compact","Comfortable","Spacious"]} value={layout} onChange={(v) => setLayout(v as typeof layout)} />
             <PillGroup label="Default Time Range" options={["7D","30D","90D"]} value={timeRange} onChange={(v) => setTimeRange(v as typeof timeRange)} />
             <div>

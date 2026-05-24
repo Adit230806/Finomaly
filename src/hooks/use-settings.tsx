@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from "rea
 import type { ReactNode } from "react";
 
 interface DisplaySettings {
-  theme:     "Light" | "Dark" | "System";
+  theme:     "Light";
   layout:    "Compact" | "Comfortable" | "Spacious";
   timeRange: "7D" | "30D" | "90D";
   currency:  "INR";
@@ -26,11 +26,22 @@ const defaultNotifs: NotifSettings = {
   emailHighRisk: true, inAppAlerts: true, liveRefresh: true, weeklyReport: false, soundAlerts: false,
 };
 
-function applyTheme(theme: DisplaySettings["theme"]) {
-  const root = document.documentElement;
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const isDark = theme === "Dark" || (theme === "System" && prefersDark);
-  root.classList.toggle("dark", isDark);
+function applyTheme() {
+  document.documentElement.classList.remove("dark");
+}
+
+function normalizeDisplay(raw: DisplaySettings): DisplaySettings {
+  return { ...raw, theme: "Light" };
+}
+
+function loadDisplay(): DisplaySettings {
+  try {
+    const raw = localStorage.getItem(DISPLAY_KEY);
+    if (!raw) return defaultDisplay;
+    return normalizeDisplay({ ...defaultDisplay, ...JSON.parse(raw) });
+  } catch {
+    return defaultDisplay;
+  }
 }
 
 function load<T>(key: string, fallback: T): T {
@@ -57,24 +68,16 @@ const Ctx = createContext<SettingsCtx>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [display, setDisplayState] = useState<DisplaySettings>(() => load(DISPLAY_KEY, defaultDisplay));
+  const [display, setDisplayState] = useState<DisplaySettings>(() => loadDisplay());
   const [notifs,  setNotifsState]  = useState<NotifSettings>(() => load(NOTIF_KEY, defaultNotifs));
 
-  // Apply theme on mount and whenever it changes
-  useEffect(() => { applyTheme(display.theme); }, [display.theme]);
-
-  // Listen for system preference changes when theme is "System"
   useEffect(() => {
-    if (display.theme !== "System") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => applyTheme("System");
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, [display.theme]);
+    applyTheme();
+  }, []);
 
   const setDisplay = useCallback((d: DisplaySettings) => {
-    setDisplayState(d);
-    applyTheme(d.theme);
+    setDisplayState(normalizeDisplay(d));
+    applyTheme();
   }, []);
 
   const saveDisplay = useCallback(() => {
@@ -90,7 +93,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(NOTIF_KEY);
     setDisplayState(defaultDisplay);
     setNotifsState(defaultNotifs);
-    applyTheme(defaultDisplay.theme);
+    applyTheme();
   }, []);
 
   return (
