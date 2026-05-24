@@ -73,3 +73,21 @@ Scaffold path: `supabase/functions/score-transaction/index.ts` calling the same 
 ## Migrations
 
 Apply `supabase/migrations/20260524140000_transaction_risk_columns.sql` in the Supabase SQL editor or via CLI.
+
+## Deployment
+
+| Platform | How |
+|----------|-----|
+| **Vercel** | Connect GitHub repo. Build runs `npm run build` with `VERCEL=1` (automatic), which enables **Nitro** and disables the Cloudflare plugin. Redeploy after env vars are set. |
+| **Cloudflare** | `npm run build` (default) then `npx wrangler deploy` using `dist/server` + `dist/client` assets. |
+
+### Vercel environment variables (required)
+
+Set in Project → Settings → Environment Variables:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Without these, the app may build but auth/data will fail at runtime.
+
+If you see `404: NOT_FOUND` with an ID like `bom1::…`, the deployment was missing a server adapter (fixed by Nitro on Vercel).
