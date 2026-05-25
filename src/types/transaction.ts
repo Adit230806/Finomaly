@@ -8,11 +8,18 @@ export type Category =
   | "ATM"
   | "Travel";
 export type PaymentMethod =
+  | "UPI"
   | "Card"
+  | "Debit Card"
+  | "Credit Card"
   | "Bank Transfer"
-  | "Crypto"
+  | "NEFT"
+  | "IMPS"
   | "Wallet"
-  | "UPI";
+  | "Apple Pay"
+  | "Google Pay"
+  | "PayPal"
+  | "Crypto";
 
 export interface Transaction {
   id: string;

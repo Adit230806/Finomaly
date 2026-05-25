@@ -21,7 +21,20 @@ type SortKey = keyof Pick<Transaction, "timestamp" | "amount" | "riskScore" | "m
 type SortDir = "asc" | "desc";
 
 const CATEGORIES: Category[]      = ["Shopping","Food","Entertainment","Transfer","ATM","Travel"];
-const METHODS:    PaymentMethod[]  = ["Card","Bank Transfer","Crypto","Wallet","UPI"];
+const METHODS: PaymentMethod[] = [
+  "UPI",
+  "Card",
+  "Debit Card",
+  "Credit Card",
+  "Bank Transfer",
+  "NEFT",
+  "IMPS",
+  "Wallet",
+  "Apple Pay",
+  "Google Pay",
+  "PayPal",
+  "Crypto",
+];
 const PAGE_SIZES = [10, 25, 50];
 
 function TransactionsPage() {

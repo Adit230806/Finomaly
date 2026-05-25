@@ -73,6 +73,11 @@ export async function scoreTransactionHybrid(params: {
 
     if (!res.ok) {
       const errText = await res.text();
+      if (res.status === 401) {
+        console.error(
+          "ML API rejected the request (401). Ensure VITE_ML_API_KEY matches ML_API_KEY in ml-api/.env, then restart the ML server.",
+        );
+      }
       throw new Error(errText || `ML API error ${res.status}`);
     }
 

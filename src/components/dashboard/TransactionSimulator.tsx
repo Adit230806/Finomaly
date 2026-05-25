@@ -23,7 +23,28 @@ const MERCHANTS = [
   "Unknown Vendor",
 ];
 const LOCATIONS = [...MAHARASHTRA_LOCATIONS];
-const METHODS = ["UPI", "Card", "Bank Transfer", "Wallet", "Crypto"] as const;
+const CATEGORIES: Category[] = [
+  "Shopping",
+  "Food",
+  "Entertainment",
+  "Transfer",
+  "ATM",
+  "Travel",
+];
+const PAYMENT_METHODS: PaymentMethod[] = [
+  "UPI",
+  "Card",
+  "Debit Card",
+  "Credit Card",
+  "Bank Transfer",
+  "NEFT",
+  "IMPS",
+  "Wallet",
+  "Apple Pay",
+  "Google Pay",
+  "PayPal",
+  "Crypto",
+];
 
 export function TransactionSimulator() {
   const { transactions, addTransaction } = useTransactions();
@@ -31,7 +52,8 @@ export function TransactionSimulator() {
   const [merchant, setMerchant] = useState(MERCHANTS[0]);
   const [amount, setAmount] = useState("125.00");
   const [location, setLocation] = useState(LOCATIONS[0]);
-  const [method, setMethod] = useState<(typeof METHODS)[number]>(METHODS[0]);
+  const [category, setCategory] = useState<Category>(CATEGORIES[0]);
+  const [method, setMethod] = useState<PaymentMethod>(PAYMENT_METHODS[0]);
   const [simLoading, setSimLoading] = useState(false);
   const [result, setResult] = useState<TransactionAnalysisResult | null>(null);
 
@@ -56,8 +78,8 @@ export function TransactionSimulator() {
         merchant,
         amount: Number(amount),
         location,
-        category: "Shopping" as Category,
-        paymentMethod: method as PaymentMethod,
+        category,
+        paymentMethod: method,
       });
 
       const contributes = saved.riskScore < TRUSTED_RISK_THRESHOLD;
@@ -156,6 +178,21 @@ export function TransactionSimulator() {
             />
           </div>
 
+          <div>
+            <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as Category)}
+              className="w-full h-11 rounded-xl border border-[#E8E6E0] px-3 text-sm outline-none focus:border-[#00C853] focus:ring-2 focus:ring-[#00C853]/20 bg-white transition-all"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">Location</label>
@@ -170,14 +207,16 @@ export function TransactionSimulator() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">Payment</label>
+              <label className="text-xs font-medium text-[#6B6B6B] mb-1.5 block">Payment method</label>
               <select
                 value={method}
-                onChange={(e) => setMethod(e.target.value as typeof method)}
+                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
                 className="w-full h-11 rounded-xl border border-[#E8E6E0] px-3 text-sm outline-none focus:border-[#00C853] focus:ring-2 focus:ring-[#00C853]/20 bg-white transition-all"
               >
-                {METHODS.map((m) => (
-                  <option key={m}>{m}</option>
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
                 ))}
               </select>
             </div>

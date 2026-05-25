@@ -437,9 +437,32 @@ function AdminDashboardPage() {
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => [formatINR(v, 0), ""]} contentStyle={{ borderRadius: 10, fontSize: 12 }} />
+                    <Tooltip
+                      formatter={(v: number, _name, props) => [
+                        formatINR(v, 0),
+                        (props?.payload as { category?: string })?.category ?? "Amount",
+                      ]}
+                      contentStyle={{ borderRadius: 10, fontSize: 12 }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-3 px-1">
+                  {spendByCategory.map((item, i) => {
+                    const total = spendByCategory.reduce((s, d) => s + d.amount, 0);
+                    const pct = total > 0 ? ((item.amount / total) * 100).toFixed(0) : "0";
+                    return (
+                      <div key={item.category} className="flex items-center gap-1.5 text-xs min-w-0">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                          style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
+                        />
+                        <span className="text-[#6B6B6B]">{item.category}</span>
+                        <span className="font-semibold text-[#0A0A0A]">{formatINR(item.amount, 0)}</span>
+                        <span className="text-[#6B6B6B]">({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             )}
           </ChartCard>

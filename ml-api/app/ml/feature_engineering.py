@@ -18,8 +18,15 @@ import pandas as pd
 PAYMENT_METHOD_RISK: dict[str, float] = {
     "UPI": 0.1,
     "Card": 0.2,
+    "Debit Card": 0.2,
+    "Credit Card": 0.25,
     "Wallet": 0.25,
+    "Apple Pay": 0.15,
+    "Google Pay": 0.15,
+    "PayPal": 0.35,
     "Bank Transfer": 0.45,
+    "NEFT": 0.4,
+    "IMPS": 0.35,
     "Crypto": 0.85,
 }
 
